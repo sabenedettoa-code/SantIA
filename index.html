@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#6c63ff" />
+  <title>SantIA V1.2</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+  <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0d1020;
+      --bg2:#121731;
+      --panel:rgba(18,23,49,.78);
+      --panel-solid:#171c38;
+      --soft:rgba(255,255,255,.06);
+      --text:#f7f8ff;
+      --muted:#b7bdd7;
+      --line:rgba(255,255,255,.10);
+      --accent:#7c72ff;
+      --cyan:#43d9ff;
+      --pink:#ff77d4;
+      --green:#35d28a;
+      --yellow:#f3bc54;
+      --red:#ff6b7f;
+      --shadow:0 22px 65px rgba(2,7,30,.38);
+    }
+    body.light{
+      --bg:#f4f6ff;
+      --bg2:#e9edff;
+      --panel:rgba(255,255,255,.82);
+      --panel-solid:#fff;
+      --soft:rgba(109,99,255,.06);
+      --text:#1d2342;
+      --muted:#667092;
+      --line:rgba(25,35,66,.10);
+      --accent:#6c63ff;
+      --cyan:#20c0ff;
+      --pink:#ff6ec8;
+      --green:#16b86d;
+      --yellow:#d99a22;
+      --red:#df4d65;
+      --shadow:0 22px 65px rgba(55,70,120,.15);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden}
+    body{
+      color:var(--text);
+      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 10% 20%,rgba(124,114,255,.20),transparent 28%),
+        radial-gradient(circle at 88% 16%,rgba(67,217,255,.15),transparent 27%),
+        radial-gradient(circle at 72% 90%,rgba(255,119,212,.13),transparent 26%),
+        linear-gradient(160deg,var(--bg),var(--bg2));
+    }
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .app{height:100dvh;display:grid;grid-template-columns:310px 1fr}
+
+    .sidebar{
+      z-index:5;min-width:0;display:flex;flex-direction:column;
+      background:var(--panel);backdrop-filter:blur(24px);
+      border-right:1px solid var(--line);box-shadow:var(--shadow)
+    }
+    .brand{padding:21px 18px 10px;display:flex;align-items:center;gap:13px}
+    .logo{
+      width:51px;height:51px;border-radius:18px;position:relative;
+      background:
+        radial-gradient(circle at 30% 27%,rgba(255,255,255,.95),rgba(255,255,255,.23) 17%,transparent 18%),
+        linear-gradient(135deg,var(--accent),var(--cyan) 55%,var(--pink));
+      box-shadow:0 15px 35px rgba(108,99,255,.32)
+    }
+    .logo:before,.logo:after{content:"";position:absolute;border-radius:50%;background:white;opacity:.8}
+    .logo:before{width:5px;height:5px;right:12px;top:13px}
+    .logo:after{width:3px;height:3px;right:17px;top:23px}
+    .brand strong{display:block;font-size:23px;letter-spacing:-.6px}
+    .brand span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+    .persona{
+      margin:0 18px 14px;border:1px solid var(--line);background:var(--soft);
+      border-radius:999px;padding:9px 11px;display:flex;align-items:center;gap:8px;
+      color:var(--muted);font-size:12px
+    }
+    .persona i{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));box-shadow:0 0 14px rgba(67,217,255,.7)}
+    .new-chat{
+      margin:0 14px 14px;border:0;border-radius:16px;padding:13px 15px;color:#fff;font-weight:800;
+      background:linear-gradient(135deg,var(--accent),var(--cyan) 60%,var(--pink));
+      box-shadow:0 14px 34px rgba(108,99,255,.25)
+    }
+    .label{padding:0 16px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+    .chat-list{flex:1;overflow:auto;padding:0 8px 12px}
+    .chat-item{display:flex;align-items:center;gap:9px;padding:10px;border-radius:14px;cursor:pointer;margin:2px 0}
+    .chat-item:hover,.chat-item.active{background:var(--soft)}
+    .chat-icon{width:29px;height:29px;border-radius:10px;background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;flex:0 0 auto}
+    .chat-title{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .del{width:28px;height:28px;border:0;border-radius:9px;background:transparent;color:var(--muted)}
+    .del:hover{background:var(--soft);color:var(--red)}
+    .side-footer{padding:10px;border-top:1px solid var(--line);display:grid;gap:5px}
+    .side-btn{border:1px solid transparent;background:transparent;color:var(--text);text-align:left;padding:10px 12px;border-radius:13px}
+    .side-btn:hover{border-color:var(--line);background:var(--soft)}
+
+    .main{min-width:0;height:100%;display:flex;flex-direction:column;position:relative}
+    .topbar{
+      min-height:72px;display:flex;align-items:center;gap:12px;padding:12px 18px;
+      border-bottom:1px solid var(--line);background:rgba(13,16,32,.28);backdrop-filter:blur(18px)
+    }
+    body.light .topbar{background:rgba(244,246,255,.48)}
+    .menu{display:none;width:40px;height:40px;border:1px solid var(--line);border-radius:13px;background:var(--panel);color:var(--text)}
+    .topcopy{min-width:0}
+    .topcopy strong{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .topcopy span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .model-pill{
+      margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 11px;
+      display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px
+    }
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 13px rgba(53,210,138,.6)}
+    .dot.off{background:var(--yellow);box-shadow:none}
+
+    .messages{flex:1;overflow:auto;padding:24px 18px 190px;scroll-behavior:smooth}
+    .conversation{max-width:920px;margin:0 auto}
+    .welcome{min-height:calc(100dvh - 275px);display:flex;flex-direction:column;justify-content:center;text-align:center}
+    .welcome-badge{
+      align-self:center;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:9px 13px;
+      color:var(--muted);font-size:13px;margin-bottom:17px;box-shadow:var(--shadow)
+    }
+    .welcome h1{margin:0 0 12px;font-size:clamp(32px,4.5vw,54px);line-height:1.02;letter-spacing:-1.7px}
+    .gradient{
+      background:linear-gradient(135deg,var(--accent),var(--cyan),var(--pink));
+      -webkit-background-clip:text;background-clip:text;color:transparent
+    }
+    .welcome p{color:var(--muted);max-width:680px;margin:0 auto;line-height:1.6}
+    .quick-grid{max-width:820px;width:100%;margin:27px auto 0;display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+    .quick{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:14px;border-radius:18px;text-align:left;box-shadow:var(--shadow)}
+    .quick:hover{transform:translateY(-2px)}
+    .quick strong{display:block;font-size:14px;margin-bottom:5px}
+    .quick span{display:block;font-size:12px;color:var(--muted);line-height:1.35}
+
+    .row{display:flex;margin:18px 0}.row.user{justify-content:flex-end}.row.assistant{justify-content:flex-start}
+    .block{max-width:min(820px,91%)}
+    .meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;margin-bottom:7px}
+    .avatar{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--line);font-weight:800}
+    .avatar.ai{color:#fff;background:linear-gradient(135deg,var(--accent),var(--cyan),var(--pink))}
+    .bubble{border:1px solid var(--line);border-radius:23px;padding:15px 17px;line-height:1.6;font-size:15px;box-shadow:var(--shadow);overflow-wrap:anywhere}
+    .assistant .bubble{background:var(--panel);backdrop-filter:blur(16px);border-bottom-left-radius:8px}
+    .user .bubble{color:#fff;border-color:transparent;background:linear-gradient(135deg,rgba(124,114,255,.92),rgba(67,217,255,.78),rgba(255,119,212,.80));border-bottom-right-radius:8px}
+    .bubble p{margin:.2em 0 .75em}.bubble p:last-child{margin-bottom:.1em}
+    .bubble h1,.bubble h2,.bubble h3{line-height:1.25;margin:.7em 0 .35em}
+    .bubble h1{font-size:1.42em}.bubble h2{font-size:1.25em}.bubble h3{font-size:1.1em}
+    .bubble ul,.bubble ol{padding-left:1.35em}
+    .bubble pre{background:#10131f;color:#f5f6ff;padding:14px;border-radius:13px;overflow:auto}
+    .bubble code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);padding:.15em .35em;border-radius:6px}
+    .bubble pre code{background:transparent;padding:0;color:inherit}
+    .tools{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+    .toolbtn{border:1px solid var(--line);background:var(--soft);color:var(--muted);border-radius:10px;padding:6px 9px;font-size:12px}
+    .toolbtn:hover{color:var(--text)}
+    .file-note{margin-top:9px;padding:9px 10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);border-radius:12px;font-size:12px}
+    .file-note strong{display:block;margin-bottom:3px}.file-note span{color:var(--muted)}
+
+    .thinking{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .thinking i{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));animation:bounce 1.05s infinite}
+    .thinking i:nth-child(2){animation-delay:.12s}.thinking i:nth-child(3){animation-delay:.24s}
+    @keyframes bounce{0%,80%,100%{transform:scale(.65);opacity:.55}40%{transform:scale(1);opacity:1}}
+
+    .composer-wrap{
+      position:absolute;z-index:6;left:0;right:0;bottom:0;padding:18px 18px calc(17px + env(safe-area-inset-bottom));
+      background:linear-gradient(to top,rgba(13,16,32,.94) 70%,transparent)
+    }
+    body.light .composer-wrap{background:linear-gradient(to top,rgba(244,246,255,.95) 70%,transparent)}
+    .attachments{max-width:920px;margin:0 auto 8px;display:flex;gap:7px;flex-wrap:wrap}
+    .attachment{
+      display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);
+      border-radius:12px;padding:7px 9px;font-size:12px;max-width:280px
+    }
+    .attachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .attachment button{border:0;background:transparent;color:var(--muted);padding:0}
+    .composer{max-width:920px;margin:0 auto;background:var(--panel);backdrop-filter:blur(22px);border:1px solid var(--line);border-radius:25px;padding:9px;box-shadow:var(--shadow)}
+    .inputrow{display:flex;align-items:flex-end;gap:8px}
+    #prompt{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--text);max-height:180px;min-height:34px;line-height:1.5;padding:8px 5px}
+    #prompt::placeholder{color:var(--muted)}
+    .roundbtn{width:44px;height:44px;min-width:44px;border:1px solid var(--line);border-radius:15px;background:var(--soft);color:var(--text);display:grid;place-items:center;font-size:18px}
+    .roundbtn.active{color:#fff;background:linear-gradient(135deg,var(--accent),var(--pink));border-color:transparent}
+    .send{border:0;color:#fff;background:linear-gradient(135deg,var(--accent),var(--cyan) 60%,var(--pink));box-shadow:0 12px 25px rgba(108,99,255,.25)}
+    .send:disabled{opacity:.48}
+    .under{max-width:920px;margin:7px auto 0;text-align:center;color:var(--muted);font-size:10.5px}
+
+    .overlay{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(5,8,22,.58);backdrop-filter:blur(9px);padding:18px}
+    .overlay.open{display:grid}
+    .modal{width:min(590px,100%);max-height:90dvh;overflow:auto;background:var(--panel);backdrop-filter:blur(24px);border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:var(--shadow)}
+    .modalhead{display:flex;align-items:center;gap:10px;margin-bottom:16px}.modalhead h2{margin:0;font-size:21px}.modalhead button{margin-left:auto;width:35px;height:35px;border:1px solid var(--line);border-radius:11px;background:var(--soft);color:var(--text)}
+    .field{margin:14px 0}.field label{display:block;font-size:13px;font-weight:800;margin-bottom:7px}.field small{display:block;color:var(--muted);line-height:1.4;margin-top:6px}
+    .field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:13px;padding:11px 12px;outline:0;background:var(--soft);color:var(--text)}
+    .checkline{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);background:var(--soft);border-radius:13px;padding:11px 12px;margin:10px 0}
+    .checkline input{margin-top:3px}.checkline strong{display:block;font-size:13px}.checkline span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+    .actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .btn{border:1px solid var(--line);background:var(--soft);color:var(--text);border-radius:13px;padding:10px 14px;font-weight:750}
+    .btn.primary{border:0;color:#fff;background:linear-gradient(135deg,var(--accent),var(--cyan),var(--pink))}
+    .toast{position:fixed;z-index:50;left:50%;bottom:105px;transform:translateX(-50%) translateY(14px);opacity:0;pointer-events:none;transition:.2s;background:#11162b;color:#fff;border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:10px 14px;max-width:min(92vw,620px);text-align:center;font-size:13px;box-shadow:var(--shadow)}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .hidden{display:none!important}
+
+    @media(max-width:900px){.quick-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:820px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);transform:translateX(-103%);transition:.22s}
+      .sidebar.open{transform:translateX(0)}
+      .menu{display:grid;place-items:center}
+    }
+    @media(max-width:520px){
+      .messages{padding-left:11px;padding-right:11px}.composer-wrap{padding-left:9px;padding-right:9px}
+      .quick-grid{grid-template-columns:1fr}.block{max-width:96%}.model-pill span{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div><strong>SantIA</strong><span>Tu IA con sello chileno</span></div>
+    </div>
+    <div class="persona"><i></i><span>Cálida • clara • cercana • chilena 🇨🇱</span></div>
+    <button class="new-chat" id="newChatBtn">✨ Nueva conversación</button>
+    <div class="label">Conversaciones</div>
+    <div class="chat-list" id="chatList"></div>
+    <div class="side-footer">
+      <button class="side-btn" id="themeBtn">◐ Cambiar tema</button>
+      <button class="side-btn" id="settingsBtn">⚙ Ajustes</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu" id="menuBtn">☰</button>
+      <div class="topcopy">
+        <strong id="topTitle">SantIA</strong>
+        <span id="topSub">Amigable, con español chileno y voz</span>
+      </div>
+      <div class="model-pill"><div class="dot off" id="statusDot"></div><span id="statusText">Configurar IA</span></div>
+    </header>
+
+    <section class="messages" id="messages">
+      <div class="conversation" id="conversation"></div>
+    </section>
+
+    <div class="composer-wrap">
+      <div class="attachments" id="attachments"></div>
+      <div class="composer">
+        <div class="inputrow">
+          <input class="hidden" id="fileInput" type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm" />
+          <button class="roundbtn" id="attachBtn" title="Adjuntar documentos">📎</button>
+          <button class="roundbtn" id="micBtn" title="Hablarle a SantIA">🎙️</button>
+          <textarea id="prompt" rows="1" placeholder="Escríbele o háblale a SantIA..."></textarea>
+          <button class="roundbtn send" id="sendBtn" title="Enviar">➤</button>
+        </div>
+      </div>
+      <div class="under">PDF • Word • TXT • Markdown • CSV • JSON • HTML · SantIA puede equivocarse; verifica información importante.</div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modalhead"><h2>Ajustes de SantIA</h2><button id="closeSettings">✕</button></div>
+
+    <div class="field">
+      <label>Clave API de Gemini</label>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="Pega aquí tu clave..." />
+      <small>Se guarda localmente en este navegador para esta versión de prueba.</small>
+    </div>
+
+    <div class="field">
+      <label>Tu nombre</label>
+      <input id="userName" placeholder="Ej.: Macarena" />
+    </div>
+
+    <div class="field">
+      <label>Preferencias extra</label>
+      <textarea id="customInstruction" rows="3" placeholder="Ej.: Para temas de trabajo, sé muy ordenada y precisa."></textarea>
+    </div>
+
+    <div class="checkline">
+      <input id="autoSpeak" type="checkbox" />
+      <div><strong>Leer las respuestas en voz alta</strong><span>SantIA intentará usar una voz chilena (es-CL) disponible en tu dispositivo.</span></div>
+    </div>
+
+    <div class="field">
+      <label>Voz preferida</label>
+      <select id="voiceSelect"></select>
+      <small>Las voces dependen de Windows, Chrome y las voces instaladas. SantIA prioriza automáticamente las de Chile.</small>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="testVoiceBtn">🔊 Probar voz</button>
+      <button class="btn" id="testKeyBtn">Probar conexión</button>
+      <button class="btn primary" id="saveSettingsBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+const MODELS = ["gemini-3.7-flash","gemini-3.6-flash","gemini-3.5-flash"];
+const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
+const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
+const PDF_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+
+const S = {
+  chats:"santia_chats_v12",
+  active:"santia_active_v12",
+  key:"santia_key_v12",
+  name:"santia_name_v12",
+  extra:"santia_extra_v12",
+  theme:"santia_theme_v12",
+  autoSpeak:"santia_auto_speak_v12",
+  voice:"santia_voice_v12"
+};
+
+const $ = id => document.getElementById(id);
+const e = {
+  sidebar:$("sidebar"), menuBtn:$("menuBtn"), newChatBtn:$("newChatBtn"), chatList:$("chatList"),
+  messages:$("messages"), conversation:$("conversation"), topTitle:$("topTitle"), topSub:$("topSub"),
+  prompt:$("prompt"), sendBtn:$("sendBtn"), attachBtn:$("attachBtn"), fileInput:$("fileInput"),
+  attachments:$("attachments"), micBtn:$("micBtn"), settingsBtn:$("settingsBtn"), themeBtn:$("themeBtn"),
+  settingsOverlay:$("settingsOverlay"), closeSettings:$("closeSettings"), apiKey:$("apiKey"),
+  userName:$("userName"), customInstruction:$("customInstruction"), autoSpeak:$("autoSpeak"),
+  voiceSelect:$("voiceSelect"), testVoiceBtn:$("testVoiceBtn"), testKeyBtn:$("testKeyBtn"),
+  saveSettingsBtn:$("saveSettingsBtn"), statusDot:$("statusDot"), statusText:$("statusText"), toast:$("toast")
+};
+
+let chats = loadJSON(S.chats, []);
+let activeId = localStorage.getItem(S.active);
+let pendingFiles = [];
+let busy = false;
+let currentModel = null;
+let voices = [];
+let recognition = null;
+
+if (!Array.isArray(chats)) chats = [];
+if (!chats.length) {
+  const c = createChat(); chats=[c]; activeId=c.id; persist();
+} else if (!chats.some(c=>c.id===activeId)) activeId=chats[0].id;
+
+applyTheme();
+setupVoices();
+setupRecognition();
+renderAll();
+if (!getKey()) setTimeout(openSettings,300);
+
+function createChat(){
+  return {id:crypto.randomUUID?.() || Date.now()+"_"+Math.random(),title:"Nueva conversación",createdAt:Date.now(),updatedAt:Date.now(),messages:[]};
+}
+function activeChat(){ return chats.find(c=>c.id===activeId); }
+function loadJSON(k,f){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f} }
+function persist(){localStorage.setItem(S.chats,JSON.stringify(chats));localStorage.setItem(S.active,activeId||"")}
+function getKey(){return (localStorage.getItem(S.key)||"").trim()}
+function getName(){return (localStorage.getItem(S.name)||"").trim()}
+function getExtra(){return (localStorage.getItem(S.extra)||"").trim()}
+function shouldAutoSpeak(){return localStorage.getItem(S.autoSpeak)==="1"}
+
+function systemInstruction(){
+  return [
+    "Tu nombre es SantIA.",
+    "Eres una asistente de inteligencia artificial extremadamente amigable, cálida, cercana, respetuosa, práctica y clara.",
+    "Tu variedad de español es siempre español de Chile. Usa vocabulario, giros y ritmo propios de Chile de manera natural.",
+    "Puedes usar expresiones chilenas suaves y cotidianas como 'bacán', 'al tiro', 'claro que sí', 'ya', 'perfecto' o 'te ayudo con eso' cuando calcen con el contexto.",
+    "No exageres el slang, no caricaturices el acento chileno y mantén profesionalismo cuando el tema lo requiera.",
+    "Nunca respondas con tono frío, cortante o distante.",
+    "Si el usuario está confundido, frustrado o preocupado, responde con empatía y paciencia.",
+    "Si te preguntan quién eres, di que eres SantIA, una asistente de IA con personalidad propia.",
+    "Nunca digas que te llamas Gemini; Gemini es solamente el motor tecnológico subyacente.",
+    "Si recibes documentos adjuntos, analízalos cuidadosamente y distingue lo que proviene del documento de tus propios conocimientos.",
+    "Si una respuesta depende de algo que no aparece en el documento, dilo con claridad.",
+    "No inventes datos. Si no sabes algo, dilo de forma amable.",
+    getName()?`La persona que usa SantIA se llama ${getName()}. Usa su nombre de forma natural, sin repetirlo demasiado.`:"",
+    getExtra()?`Preferencias adicionales: ${getExtra()}`:""
+  ].filter(Boolean).join("\n");
+}
+
+function messageToTranscript(m){
+  let base = `${m.role==="user"?"USUARIO":"SANTIA"}:\n${m.content}`;
+  if (m.attachments?.length) {
+    for (const a of m.attachments) {
+      base += `\n\n[DOCUMENTO ADJUNTO: ${a.name}]\n${a.text}\n[FIN DOCUMENTO: ${a.name}]`;
+    }
+  }
+  return base;
+}
+
+function transcriptFor(chat,text,attachments){
+  const history = chat.messages.map(messageToTranscript).join("\n\n");
+  let now = `USUARIO:\n${text}`;
+  for (const a of attachments) now += `\n\n[DOCUMENTO ADJUNTO: ${a.name}]\n${a.text}\n[FIN DOCUMENTO: ${a.name}]`;
+  return [history?`Historial:\n\n${history}`:"",now,"SANTIA:"].filter(Boolean).join("\n\n");
+}
+
+async function callModel(model,input,key){
+  const res = await fetch(ENDPOINT,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-goog-api-key":key},
+    body:JSON.stringify({model,store:false,system_instruction:systemInstruction(),input})
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok){
+    const err = new Error(data?.error?.message || `Error ${res.status}`);
+    err.status=res.status; err.model=model; throw err;
+  }
+  const text = extractText(data);
+  if(!text) throw new Error("Respuesta vacía.");
+  return text.trim();
+}
+
+function extractText(data){
+  const out=[];
+  for(const step of (data?.steps||[])){
+    if(step?.type!=="model_output") continue;
+    for(const item of (step?.content||[])){
+      if(item?.type==="text" && item?.text) out.push(item.text);
+    }
+  }
+  return out.join("\n");
+}
+
+function isCapacityError(err){
+  const m=(err?.message||"").toLowerCase();
+  return err?.status===429 || err?.status===503 || m.includes("high demand") || m.includes("overloaded") || m.includes("capacity") || m.includes("temporar");
+}
+
+async function callSantIA(input){
+  const key=getKey();
+  if(!key) throw new Error("NO_KEY");
+  let last=null;
+  for(let i=0;i<MODELS.length;i++){
+    const model=MODELS[i];
+    currentModel=model;
+    updateStatus();
+    try{
+      if(i>0) await delay(450);
+      const text=await callModel(model,input,key);
+      return {text,model};
+    }catch(err){
+      last=err;
+      if(!isCapacityError(err)) throw err;
+    }
+  }
+  throw last || new Error("No hay modelos disponibles en este momento.");
+}
+
+async function sendMessage(prefill){
+  if(busy) return;
+  const text=(prefill ?? e.prompt.value).trim();
+  if(!text && !pendingFiles.length) return;
+  if(!getKey()){toast("Primero configura tu clave de Gemini.");openSettings();return}
+
+  const c=activeChat(); if(!c) return;
+  const attachments=pendingFiles.map(a=>({name:a.name,type:a.type,text:a.text.slice(0,60000)}));
+  const visibleText=text || (attachments.length===1?`Analiza el documento "${attachments[0].name}".`:"Analiza los documentos adjuntos.");
+  const prior=[...c.messages];
+
+  c.messages.push({role:"user",content:visibleText,attachments,createdAt:Date.now()});
+  if(prior.length===0)c.title=titleFrom(visibleText,attachments);
+  c.updatedAt=Date.now(); persist();
+
+  e.prompt.value=""; pendingFiles=[]; renderAttachments(); autoResize();
+  busy=true;e.sendBtn.disabled=true;renderAll(true);showThinking();
+
+  try{
+    const shadow={...c,messages:prior};
+    const input=transcriptFor(shadow,visibleText,attachments);
+    const result=await callSantIA(input);
+    c.messages.push({role:"assistant",content:result.text,model:result.model,createdAt:Date.now()});
+    c.updatedAt=Date.now(); persist();
+    if(shouldAutoSpeak()) speak(result.text);
+  }catch(err){
+    let msg="Pucha, justo ahora estoy teniendo dificultad para conectarme. Intenta nuevamente en unos segundos y lo probamos al tiro. 💜";
+    if(err.message==="NO_KEY") msg="Necesito que configures tu clave de Gemini antes de conversar.";
+    else if(err.status===401||err.status===403) msg="La clave de Gemini no fue aceptada. Revísala en Ajustes y probamos de nuevo.";
+    else if(!isCapacityError(err) && err.message) msg+=`\n\nDetalle técnico: ${err.message}`;
+    c.messages.push({role:"assistant",content:"⚠️ "+msg,error:true,createdAt:Date.now()});persist();
+  }finally{
+    busy=false;e.sendBtn.disabled=false;renderAll(true);e.prompt.focus();
+  }
+}
+
+function titleFrom(text,files){
+  if(files?.length && (!text || text.startsWith("Analiza el documento"))) return "📎 "+files[0].name;
+  const s=text.replace(/\s+/g," ").trim();
+  return s.length>42?s.slice(0,42)+"…":s;
+}
+
+async function handleFiles(fileList){
+  const files=[...fileList];
+  if(!files.length)return;
+  for(const file of files){
+    if(file.size>15*1024*1024){toast(`${file.name} supera 15 MB.`);continue}
+    try{
+      toast(`Leyendo ${file.name}...`);
+      const text=await extractDocument(file);
+      if(!text.trim()){toast(`No pude extraer texto de ${file.name}.`);continue}
+      pendingFiles.push({name:file.name,type:file.type||ext(file.name),text});
+      renderAttachments();
+      toast(`${file.name} listo ✓`);
+    }catch(err){
+      toast(`No pude leer ${file.name}: ${err.message}`,3500);
+    }
+  }
+  e.fileInput.value="";
+}
+
+async function extractDocument(file){
+  const extension=ext(file.name);
+  if(extension==="pdf") return await extractPDF(file);
+  if(extension==="docx") return await extractDOCX(file);
+  if(["txt","md","csv","json","html","htm"].includes(extension)) return await file.text();
+  throw new Error("Formato no compatible todavía.");
+}
+
+async function extractPDF(file){
+  const pdfjsLib=await import(PDFJS_URL);
+  pdfjsLib.GlobalWorkerOptions.workerSrc=PDF_WORKER;
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let out="";
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    out+=`\n\n--- Página ${p} ---\n`+content.items.map(x=>x.str).join(" ");
+    if(out.length>60000)break;
+  }
+  return out.slice(0,60000);
+}
+
+async function extractDOCX(file){
+  if(!window.mammoth) throw new Error("No se cargó el lector de Word.");
+  const buf=await file.arrayBuffer();
+  const result=await window.mammoth.extractRawText({arrayBuffer:buf});
+  return (result.value||"").slice(0,60000);
+}
+
+function ext(name){return (name.split(".").pop()||"").toLowerCase()}
+
+function setupRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){e.micBtn.title="El reconocimiento de voz no está disponible en este navegador";return}
+  recognition=new SR();
+  recognition.lang="es-CL";
+  recognition.interimResults=true;
+  recognition.continuous=false;
+  let base="";
+  recognition.onstart=()=>{base=e.prompt.value.trim();e.micBtn.classList.add("active");toast("Te escucho 🎙️")};
+  recognition.onresult=ev=>{
+    let final="",interim="";
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const t=ev.results[i][0].transcript;
+      if(ev.results[i].isFinal)final+=t;else interim+=t;
+    }
+    const prefix=base?base+" ":"";
+    e.prompt.value=prefix+(final||interim);
+    autoResize();
+  };
+  recognition.onerror=()=>{toast("No pude escuchar bien. Prueba otra vez.");e.micBtn.classList.remove("active")};
+  recognition.onend=()=>e.micBtn.classList.remove("active");
+}
+
+function toggleMic(){
+  if(!recognition){toast("Tu navegador no permite dictado por voz.");return}
+  try{
+    if(e.micBtn.classList.contains("active"))recognition.stop();else recognition.start();
+  }catch{}
+}
+
+function setupVoices(){
+  const load=()=>{
+    voices=window.speechSynthesis?.getVoices?.()||[];
+    const saved=localStorage.getItem(S.voice)||"";
+    const sorted=[...voices].sort((a,b)=>{
+      const score=v=>v.lang?.toLowerCase()==="es-cl"?0:v.lang?.toLowerCase().startsWith("es")?1:2;
+      return score(a)-score(b);
+    });
+    e.voiceSelect.innerHTML="";
+    if(!sorted.length){
+      const o=document.createElement("option");o.textContent="Voz predeterminada del sistema";o.value="";e.voiceSelect.appendChild(o);return;
+    }
+    sorted.forEach(v=>{
+      const o=document.createElement("option");
+      o.value=v.name;o.textContent=`${v.name} — ${v.lang}`;
+      if(v.name===saved)o.selected=true;
+      e.voiceSelect.appendChild(o);
+    });
+    if(!saved){
+      const cl=sorted.find(v=>v.lang?.toLowerCase()==="es-cl");
+      if(cl)e.voiceSelect.value=cl.name;
+    }
+  };
+  load();
+  if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=load;
+}
+
+function chosenVoice(){
+  const selected=e.voiceSelect?.value || localStorage.getItem(S.voice)||"";
+  return voices.find(v=>v.name===selected)
+    || voices.find(v=>v.lang?.toLowerCase()==="es-cl")
+    || voices.find(v=>v.lang?.toLowerCase().startsWith("es"))
+    || null;
+}
+
+function speak(text){
+  if(!("speechSynthesis" in window)){toast("Este navegador no permite lectura en voz alta.");return}
+  window.speechSynthesis.cancel();
+  const clean=text.replace(/```[\s\S]*?```/g," código omitido ").replace(/[*#`_>\[\]]/g," ").replace(/\s+/g," ").trim();
+  const u=new SpeechSynthesisUtterance(clean);
+  u.lang="es-CL";u.rate=1.02;u.pitch=1.03;
+  const v=chosenVoice();if(v)u.voice=v;
+  window.speechSynthesis.speak(u);
+}
+
+function renderAll(scroll=false){renderChats();renderConversation();updateStatus();if(scroll)requestAnimationFrame(scrollBottom)}
+function renderChats(){
+  e.chatList.innerHTML="";
+  [...chats].sort((a,b)=>b.updatedAt-a.updatedAt).forEach(c=>{
+    const item=document.createElement("div");item.className="chat-item"+(c.id===activeId?" active":"");
+    const ic=document.createElement("div");ic.className="chat-icon";ic.textContent="✦";
+    const title=document.createElement("div");title.className="chat-title";title.textContent=c.title||"Nueva conversación";
+    const del=document.createElement("button");del.className="del";del.textContent="✕";
+    del.onclick=ev=>{ev.stopPropagation();deleteChat(c.id)};
+    item.onclick=()=>{activeId=c.id;persist();renderAll(true);e.sidebar.classList.remove("open")};
+    item.append(ic,title,del);e.chatList.appendChild(item);
+  });
+}
+function renderConversation(){
+  const c=activeChat();e.conversation.innerHTML="";e.topTitle.textContent=c?.title||"SantIA";
+  if(!c||!c.messages.length){
+    e.conversation.innerHTML=`
+      <div class="welcome">
+        <div class="welcome-badge">🇨🇱 Cercana, amable y con voz</div>
+        <h1>${esc(greeting())}<br><span class="gradient">Soy SantIA</span></h1>
+        <p>Puedes escribirme, hablarme por micrófono o adjuntarme documentos. Siempre voy a responderte en español chileno, de manera cercana y clara.</p>
+        <div class="quick-grid">
+          <button class="quick" data-prompt="Ayúdame a crear un texto. Primero pregúntame qué necesito."><strong>✍️ Crear</strong><span>Textos e ideas</span></button>
+          <button class="quick" data-prompt="Quiero investigar un tema. Ayúdame a organizar la investigación."><strong>🔎 Investigar</strong><span>Explorar y comprender</span></button>
+          <button class="quick" data-prompt="Quiero estudiar algo. Pregúntame el tema y enséñamelo paso a paso."><strong>📚 Estudiar</strong><span>Aprender con calma</span></button>
+          <button class="quick" data-prompt="Ayúdame a organizar un proyecto o tarea."><strong>🗂 Organizar</strong><span>Pasar de idea a plan</span></button>
+        </div>
+      </div>`;
+    e.conversation.querySelectorAll(".quick").forEach(b=>b.onclick=()=>sendMessage(b.dataset.prompt));
+    return;
+  }
+  c.messages.forEach(m=>{
+    const row=document.createElement("div");row.className=`row ${m.role}`;
+    const block=document.createElement("div");block.className="block";
+    const meta=document.createElement("div");meta.className="meta";
+    const av=document.createElement("div");av.className="avatar "+(m.role==="assistant"?"ai":"");av.textContent=m.role==="assistant"?"S":"T";
+    const who=document.createElement("span");who.textContent=m.role==="assistant"?"SantIA":(getName()||"Tú");
+    meta.append(av,who);
+    const bubble=document.createElement("div");bubble.className="bubble";
+    if(m.role==="assistant"){
+      bubble.innerHTML=md(m.content);
+      const tools=document.createElement("div");tools.className="tools";
+      const cp=document.createElement("button");cp.className="toolbtn";cp.textContent="Copiar";cp.onclick=async()=>{await navigator.clipboard.writeText(m.content).catch(()=>{});cp.textContent="Copiado ✓";setTimeout(()=>cp.textContent="Copiar",1200)};
+      const sp=document.createElement("button");sp.className="toolbtn";sp.textContent="🔊 Escuchar";sp.onclick=()=>speak(m.content);
+      tools.append(cp,sp);
+      if(m.model){const badge=document.createElement("button");badge.className="toolbtn";badge.textContent=m.model;badge.disabled=true;tools.appendChild(badge)}
+      bubble.appendChild(tools);
+    }else{
+      bubble.textContent=m.content;
+      if(m.attachments?.length){
+        m.attachments.forEach(a=>{
+          const n=document.createElement("div");n.className="file-note";n.innerHTML=`<strong>📎 ${esc(a.name)}</strong><span>Documento incluido en esta consulta</span>`;bubble.appendChild(n);
+        });
+      }
+    }
+    block.append(meta,bubble);row.appendChild(block);e.conversation.appendChild(row);
+  });
+}
+function renderAttachments(){
+  e.attachments.innerHTML="";
+  pendingFiles.forEach((a,i)=>{
+    const d=document.createElement("div");d.className="attachment";
+    const s=document.createElement("span");s.textContent="📎 "+a.name;
+    const x=document.createElement("button");x.textContent="✕";x.onclick=()=>{pendingFiles.splice(i,1);renderAttachments()};
+    d.append(s,x);e.attachments.appendChild(d);
+  });
+}
+function showThinking(){
+  const row=document.createElement("div");row.className="row assistant";row.innerHTML=`<div class="block"><div class="meta"><div class="avatar ai">S</div><span>SantIA</span></div><div class="bubble"><div class="thinking"><span>SantIA está pensando</span><i></i><i></i><i></i></div></div></div>`;e.conversation.appendChild(row);scrollBottom()
+}
+
+function md(src){
+  let s=esc(src),codes=[];
+  s=s.replace(/```([\s\S]*?)```/g,(_,c)=>{const t=`@@C${codes.length}@@`;codes.push(`<pre><code>${c.trim()}</code></pre>`);return t});
+  s=s.replace(/^### (.+)$/gm,"<h3>$1</h3>").replace(/^## (.+)$/gm,"<h2>$1</h2>").replace(/^# (.+)$/gm,"<h1>$1</h1>").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`([^`\n]+)`/g,"<code>$1</code>");
+  let out="",ul=false,ol=false;
+  const close=()=>{if(ul){out+="</ul>";ul=false}if(ol){out+="</ol>";ol=false}};
+  for(const line of s.split("\n")){
+    if(/^@@C\d+@@$/.test(line.trim())){close();out+=line.trim()}
+    else if(/^- (.+)/.test(line)){if(ol){out+="</ol>";ol=false}if(!ul){out+="<ul>";ul=true}out+=`<li>${line.replace(/^- /,"")}</li>`}
+    else if(/^\d+\. (.+)/.test(line)){if(ul){out+="</ul>";ul=false}if(!ol){out+="<ol>";ol=true}out+=`<li>${line.replace(/^\d+\. /,"")}</li>`}
+    else{close();if(line.trim()){out+=/^<h[1-3]>/.test(line)?line:`<p>${line}</p>`}}
+  }close();codes.forEach((h,i)=>out=out.replace(`@@C${i}@@`,h));return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}
+function greeting(){const h=new Date().getHours(),n=getName();const g=h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches";return n?`${g}, ${n} ✨`:`${g} ✨`}
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+function scrollBottom(){e.messages.scrollTop=e.messages.scrollHeight}
+function autoResize(){e.prompt.style.height="auto";e.prompt.style.height=Math.min(e.prompt.scrollHeight,180)+"px"}
+function toast(t,d=2400){e.toast.textContent=t;e.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.toast.classList.remove("show"),d)}
+
+function newChat(){const c=createChat();chats.push(c);activeId=c.id;persist();renderAll();e.sidebar.classList.remove("open");e.prompt.focus()}
+function deleteChat(id){const c=chats.find(x=>x.id===id);if(!c)return;if(!confirm(`¿Eliminar "${c.title}"?`))return;chats=chats.filter(x=>x.id!==id);if(!chats.length)chats=[createChat()];if(!chats.some(x=>x.id===activeId))activeId=chats[0].id;persist();renderAll()}
+
+function openSettings(){
+  e.apiKey.value=getKey();e.userName.value=getName();e.customInstruction.value=getExtra();e.autoSpeak.checked=shouldAutoSpeak();setupVoices();e.settingsOverlay.classList.add("open")
+}
+function closeSettings(){e.settingsOverlay.classList.remove("open")}
+function saveSettings(){
+  const pairs=[[S.key,e.apiKey.value.trim()],[S.name,e.userName.value.trim()],[S.extra,e.customInstruction.value.trim()],[S.voice,e.voiceSelect.value]];
+  pairs.forEach(([k,v])=>v?localStorage.setItem(k,v):localStorage.removeItem(k));
+  localStorage.setItem(S.autoSpeak,e.autoSpeak.checked?"1":"0");
+  updateStatus();renderConversation();closeSettings();toast("Ajustes guardados ✓")
+}
+async function testKey(){
+  const key=e.apiKey.value.trim();if(!key){toast("Pega primero tu clave.");return}
+  e.testKeyBtn.disabled=true;e.testKeyBtn.textContent="Probando...";
+  let ok=false,last="";
+  for(const model of MODELS){
+    try{
+      const r=await callModel(model,"Responde solo: CONEXION_OK",key);if(r){ok=true;currentModel=model;break}
+    }catch(err){last=err.message;if(!isCapacityError(err))break}
+  }
+  if(ok){localStorage.setItem(S.key,key);toast(`Conexión correcta ✓ ${currentModel}`)}else toast("No se pudo conectar: "+last,3500);
+  e.testKeyBtn.disabled=false;e.testKeyBtn.textContent="Probar conexión";updateStatus()
+}
+function updateStatus(){
+  const ready=!!getKey();e.statusDot.classList.toggle("off",!ready);
+  e.statusText.textContent=ready?(currentModel||"Gemini automático"):"Configurar IA"
+}
+function applyTheme(){if(localStorage.getItem(S.theme)==="light")document.body.classList.add("light")}
+function toggleTheme(){document.body.classList.toggle("light");localStorage.setItem(S.theme,document.body.classList.contains("light")?"light":"dark")}
+
+e.newChatBtn.onclick=newChat;
+e.sendBtn.onclick=()=>sendMessage();
+e.prompt.oninput=autoResize;
+e.prompt.onkeydown=ev=>{if(ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();sendMessage()}};
+e.attachBtn.onclick=()=>e.fileInput.click();
+e.fileInput.onchange=()=>handleFiles(e.fileInput.files);
+e.micBtn.onclick=toggleMic;
+e.settingsBtn.onclick=openSettings;
+e.closeSettings.onclick=closeSettings;
+e.saveSettingsBtn.onclick=saveSettings;
+e.testKeyBtn.onclick=testKey;
+e.testVoiceBtn.onclick=()=>speak("Hola, soy SantIA. Qué bueno tenerte por acá. ¿En qué te ayudo?");
+e.themeBtn.onclick=toggleTheme;
+e.menuBtn.onclick=()=>e.sidebar.classList.toggle("open");
+e.settingsOverlay.onclick=ev=>{if(ev.target===e.settingsOverlay)closeSettings()};
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){closeSettings();e.sidebar.classList.remove("open")}});
+
+autoResize();
+</script>
+</body>
+</html>
